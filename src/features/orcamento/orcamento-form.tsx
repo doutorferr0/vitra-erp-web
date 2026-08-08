@@ -123,7 +123,9 @@ function BotoesInsercao({ append }: { append: (row: FormGridRow) => void }) {
 
 // Busca de cliente = `GET /api/partners?role=customer`. Chaves no nome do
 // contrato porque viajam como `sortBy`.
-const colunasCliente: ColumnDef<PartnerDto>[] = [
+/** Colunas de PARCEIRO — servem à busca de Cliente e à de Profissional Externo:
+ * as duas são papéis do mesmo `GET /api/partners`, só o filtro `role` muda. */
+const colunasParceiro: ColumnDef<PartnerDto>[] = [
   {
     accessorKey: 'code',
     header: 'Código',
@@ -135,6 +137,7 @@ const colunasCliente: ColumnDef<PartnerDto>[] = [
 function Cabecalho() {
   const { setValue } = useFormContext<Orcamento>()
   const [buscaClienteOpen, setBuscaClienteOpen] = useState(false)
+  const [buscaProfissionalOpen, setBuscaProfissionalOpen] = useState(false)
 
   return (
     <>
@@ -167,18 +170,41 @@ function Cabecalho() {
             </Button>
           </div>
         </div>
+        {/* `[busca +...]` na transcrição (§8.2), não `[combo]` — ficou como
+            `LookupSelectField kind="cargo"` por engano até esta correção: Cargo
+            é a categoria de função trabalhista do Colaborador (§2), sem relação
+            com "quem consultou a venda". O alvo certo segue sem tela própria
+            identificável na transcrição (§10 não elucida), então o campo
+            continua como estava até haver captura — só o TODO fica registrado. */}
+        {/* TODO(transcricao): `Consultor(a)` é `[busca +...]` no legado; o
+            cadastro que ela busca não foi identificado (§10). Não trocar por
+            SearchDialog sem saber contra qual tabela. */}
         <LookupSelectField
           name="consultor"
           label="Consultor(a)"
           kind="cargo"
           className="col-span-6 sm:col-span-3"
         />
-        <LookupSelectField
-          name="profissionalExterno"
-          label="Profissional Externo"
-          kind="profissional"
-          className="col-span-6 sm:col-span-4"
-        />
+        {/* `Profissional Externo` é `[busca +...]` (§8.2), e o alvo É óbvio: o
+            NOME bate literalmente com o cadastro já construído
+            (`/cadastros/profissionais`). Estava como `LookupSelectField
+            kind="profissional"` — a MESMA categoria genérica que o campo
+            "Profissional" do Cliente usa (§5, "arquiteto"/"designer" como
+            texto livre) — casando a PESSOA específica da obra com uma
+            categoria solta. Corrigido para buscar a pessoa de verdade. */}
+        <div className="col-span-6 sm:col-span-4">
+          <div className="flex items-end gap-1">
+            <TextField name="profissionalExterno" label="Profissional Externo" className="flex-1" />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setBuscaProfissionalOpen(true)}
+            >
+              <User className="size-4" /> Buscar
+            </Button>
+          </div>
+        </div>
         <TextField
           name="descricaoObra"
           label="Descrição da Obra"
@@ -190,12 +216,24 @@ function Cabecalho() {
         open={buscaClienteOpen}
         onOpenChange={setBuscaClienteOpen}
         title="Busca de Cliente"
-        columns={colunasCliente}
+        columns={colunasParceiro}
         queryKey={['busca-cliente-orcamento']}
         fetcher={(state) => data.clientes.list(state, 0)}
         onSelect={(c) => {
           setValue('cliente', c.legalName, { shouldDirty: true })
           setBuscaClienteOpen(false)
+        }}
+      />
+      <SearchDialog
+        open={buscaProfissionalOpen}
+        onOpenChange={setBuscaProfissionalOpen}
+        title="Busca de Profissional Externo"
+        columns={colunasParceiro}
+        queryKey={['busca-profissional-orcamento']}
+        fetcher={(state) => data.profissionais.list(state, 0)}
+        onSelect={(p) => {
+          setValue('profissionalExterno', p.legalName, { shouldDirty: true })
+          setBuscaProfissionalOpen(false)
         }}
       />
     </>

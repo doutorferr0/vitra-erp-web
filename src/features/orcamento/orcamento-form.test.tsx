@@ -92,4 +92,32 @@ describe('tela Orçamento', () => {
       expect(router.state.location.pathname).toBe('/vendas/orcamentos')
     })
   })
+
+  // `Profissional Externo` é `[busca +...]` na transcrição (§8.2) contra o
+  // MESMO cadastro de `/cadastros/profissionais` — não a categoria genérica
+  // "Profissional" que o Cliente usa (§5). Trocado nesta sessão de
+  // `LookupSelectField` pra `SearchDialog` de verdade; mapa em
+  // `topicos/frente-visual.md` §@mapa-softlux.
+  it('busca de profissional externo preenche o campo com a PESSOA, não uma categoria', async () => {
+    const { user } = renderRoute(
+      '/vendas/orcamentos/novo',
+      stubDeParceiros([
+        parceiro({ code: 'P001', legalName: 'ARQ. CAMILA SODRÉ', isProfessional: true }),
+      ]),
+    )
+
+    await screen.findByLabelText('Código')
+    await user.click(screen.getByRole('button', { name: 'Buscar' }))
+
+    const dialog = await screen.findByRole('dialog')
+    expect(dialog).toHaveTextContent('Busca de Profissional Externo')
+    await user.click(await within(dialog).findByText('ARQ. CAMILA SODRÉ'))
+    await user.click(within(dialog).getByRole('button', { name: 'Selecionar' }))
+
+    await waitFor(() => {
+      expect(screen.getByLabelText('Profissional Externo', { selector: 'input' })).toHaveValue(
+        'ARQ. CAMILA SODRÉ',
+      )
+    })
+  })
 })
